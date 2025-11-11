@@ -30,11 +30,10 @@ ENV SUNO_COOKIE=${SUNO_COOKIE}
 ENV BROWSER_DISABLE_GPU=true
 ENV BROWSER_HEADLESS=true
 
-RUN pnpm install --prod --frozen-lockfile                                                                                       
+RUN pnpm install --prod --frozen-lockfile
                                                                                                                     
-# Install all supported browsers, else switching browsers requires an image rebuild                                     
-RUN pnpm exec playwright install chromium --with-deps                                                                                     
-# RUN pnpm exec playwright install firefox --with-deps                                                                                     
+# The app uses @playwright/browser-chromium which includes the browser
+# No separate installation needed - browser is bundled with the package                                                                                     
                                                                                                                     
 COPY --from=builder /src/.next ./.next
 COPY --from=builder /src/public ./public
