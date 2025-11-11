@@ -29,37 +29,53 @@ This guide will help you deploy the Suno AI Song Creator app to your Dokploy ser
 
 ### Step 3: Deploy on Dokploy
 
-#### Option A: Deploy from GitHub
+⚠️ **Important**: This app MUST be deployed using Docker (Option B), not as a standard Node.js app. The app uses Playwright/Chromium which requires Docker.
 
-1. Fork or clone this repository to your GitHub account
-2. In Dokploy, create a new application
-3. Choose "GitHub" as the source
-4. Select your repository
-5. Configure the build settings:
-   - **Build Command**: `pnpm install && pnpm build`
-   - **Start Command**: `pnpm start`
+#### ✅ RECOMMENDED: Deploy using Docker
+
+1. **Push your code to GitHub/GitLab** (if not already done)
+
+2. **In Dokploy Dashboard:**
+   - Click "Create New Application"
+   - Choose **"Docker Compose"** or **"Dockerfile"** as the source
+   - Select your Git repository
+   
+3. **Deployment Settings:**
+   - **Dockerfile Path**: `./Dockerfile` (already in root)
    - **Port**: `3000`
-
-6. Add environment variables:
+   - **Health Check**: Optional - `/creator` endpoint
+   
+4. **Add Environment Variables** (in Dokploy):
    ```env
-   SUNO_COOKIE=<your-suno-cookie>
+   SUNO_COOKIE=<your-entire-suno-cookie-string>
    TWOCAPTCHA_KEY=<your-2captcha-api-key>
    BROWSER=chromium
-   BROWSER_GHOST_CURSOR=false
-   BROWSER_LOCALE=en
    BROWSER_HEADLESS=true
+   BROWSER_DISABLE_GPU=true
    NODE_ENV=production
    ```
 
-7. Deploy the application
+5. **Build Arguments** (optional, can also use env vars):
+   - `SUNO_COOKIE`: Your Suno cookie
 
-#### Option B: Deploy using Docker
+6. **Deploy** - Click "Deploy" button and wait 5-10 minutes for first build
 
-1. In Dokploy, create a new application
-2. Choose "Docker Compose" as the source
-3. Use the provided `docker-compose.yml` file
-4. Add the environment variables as shown above
-5. Deploy
+#### ❌ Why Not Standard Build?
+
+Standard Node.js deployment (`pnpm build && pnpm start`) won't work because:
+- Playwright/Chromium requires system dependencies
+- Browser automation needs Docker environment
+- Serverless/Edge functions can't run Puppeteer
+
+#### 🔧 Alternative: Docker Compose
+
+If you prefer Docker Compose, create a `.env` file with your variables and use:
+
+```bash
+docker-compose up -d
+```
+
+The `docker-compose.yml` is already configured in the repository.
 
 ### Step 4: Configure Domain (Optional)
 
