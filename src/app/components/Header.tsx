@@ -10,7 +10,7 @@ export default function Header() {
                 <div className="font-medium text-xl text-indigo-900 flex items-center gap-2">
                     <Logo className="w-4 h-4" />
                     <Link href='/'>
-                        Suno API
+                        STOF
                     </Link>
                 </div>
                 <div className="flex items-center justify-center gap-1 text-sm font-light text-indigo-900/90">
