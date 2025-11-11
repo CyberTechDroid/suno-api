@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 
 interface Song {
@@ -32,6 +32,7 @@ export default function SongCreator() {
   const [mySongs, setMySongs] = useState<Song[]>([]);
   const [showMySongs, setShowMySongs] = useState(false);
   const [loadingSongs, setLoadingSongs] = useState(false);
+  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Register service worker for PWA
   useEffect(() => {
@@ -40,6 +41,16 @@ export default function SongCreator() {
         console.log('Service Worker registration failed:', error);
       });
     }
+  }, []);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    const currentTimeout = pollingTimeoutRef.current;
+    return () => {
+      if (currentTimeout) {
+        clearTimeout(currentTimeout);
+      }
+    };
   }, []);
 
   const generateSong = async () => {
@@ -105,7 +116,14 @@ export default function SongCreator() {
 
     const checkStatus = async () => {
       try {
-        const response = await fetch(`/api/get?ids=${songIds.join(',')}`);
+        const response = await fetch(`/api/get?ids=${songIds.join(',')}`, {
+          signal: AbortSignal.timeout(10000), // 10 second timeout
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const songs = await response.json();
         
         setGeneratedSongs(songs);
@@ -114,14 +132,31 @@ export default function SongCreator() {
         
         if (!allComplete && attempts < maxAttempts) {
           attempts++;
-          setTimeout(checkStatus, 5000); // Check every 5 seconds
+          pollingTimeoutRef.current = setTimeout(checkStatus, 5000); // Check every 5 seconds
+        } else {
+          setLoading(false);
+          pollingTimeoutRef.current = null;
         }
       } catch (err) {
         console.error('Error checking song status:', err);
+        // Don't stop polling on error, just retry
+        if (attempts < maxAttempts) {
+          attempts++;
+          pollingTimeoutRef.current = setTimeout(checkStatus, 5000);
+        } else {
+          setLoading(false);
+          pollingTimeoutRef.current = null;
+          setError('Polling timed out. Please check your songs manually.');
+        }
       }
     };
 
-    setTimeout(checkStatus, 5000);
+    // Clear any existing polling
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current);
+    }
+    
+    pollingTimeoutRef.current = setTimeout(checkStatus, 5000);
   };
 
   const fetchMySongs = async () => {
@@ -321,7 +356,11 @@ export default function SongCreator() {
         <div className="max-w-4xl mx-auto bg-gradient-to-br from-gray-800/95 to-gray-900/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-700/50 p-8 md:p-10 mb-12">
           <div className="grid grid-cols-2 gap-4 mb-8 p-1 bg-gray-900/50 rounded-xl">
             <button
-              onClick={() => setCustomMode(false)}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                setCustomMode(false);
+              }}
               className={`py-4 px-6 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2 ${
                 !customMode
                   ? 'bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg shadow-purple-500/50 scale-105 text-white'
@@ -332,7 +371,11 @@ export default function SongCreator() {
               <span>Simple Mode</span>
             </button>
             <button
-              onClick={() => setCustomMode(true)}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                setCustomMode(true);
+              }}
               className={`py-4 px-6 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2 ${
                 customMode
                   ? 'bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg shadow-purple-500/50 scale-105 text-white'
@@ -347,15 +390,21 @@ export default function SongCreator() {
           {!customMode ? (
             <div className="space-y-6">
               <div>
-                <label className="flex items-center gap-2 text-sm font-bold mb-3 text-gray-200 uppercase tracking-wide">
-                  <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Describe your song
-                </label>
+                <div className="flex justify-between items-center mb-3">
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-200 uppercase tracking-wide">
+                    <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Describe your song
+                  </label>
+                  <span className={`text-xs font-mono ${prompt.length > 400 ? 'text-red-400' : prompt.length > 350 ? 'text-yellow-400' : 'text-gray-500'}`}>
+                    {prompt.length}/500
+                  </span>
+                </div>
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
+                  maxLength={500}
                   placeholder="e.g., A cheerful pop song about summer adventures, with upbeat rhythm and catchy chorus"
                   className="w-full p-5 rounded-xl bg-gray-900/50 border-2 border-gray-700 focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 outline-none transition-all text-white placeholder-gray-500 text-lg shadow-inner"
                   rows={4}
@@ -391,17 +440,24 @@ export default function SongCreator() {
                 />
               </div>
               <div>
-                <label className="flex items-center gap-2 text-sm font-bold mb-3 text-gray-200 uppercase tracking-wide">
-                  <span className="text-xl">🎸</span>
-                  Music Style / Genre
-                </label>
+                <div className="flex justify-between items-center mb-3">
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-200 uppercase tracking-wide">
+                    <span className="text-xl">🎸</span>
+                    Music Style / Genre
+                  </label>
+                  <span className={`text-xs font-mono ${tags.length > 100 ? 'text-red-400' : tags.length > 80 ? 'text-yellow-400' : 'text-gray-500'}`}>
+                    {tags.length}/120
+                  </span>
+                </div>
                 <input
                   type="text"
                   value={tags}
                   onChange={(e) => setTags(e.target.value)}
+                  maxLength={120}
                   placeholder="e.g., Indie Folk, Acoustic Rock, Upbeat, 120 BPM"
                   className="w-full p-4 rounded-xl bg-gray-900/50 border-2 border-gray-700 focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 outline-none transition-all text-white placeholder-gray-500 text-lg shadow-inner"
                 />
+                <p className="mt-2 text-xs text-gray-500">Keep it concise - describe the genre, mood, and key characteristics</p>
               </div>
               <div>
                 <div className="flex justify-between items-center mb-3">
@@ -427,14 +483,20 @@ export default function SongCreator() {
                 />
               </div>
               <div>
-                <label className="flex items-center gap-2 text-sm font-bold mb-3 text-gray-200 uppercase tracking-wide">
-                  <span className="text-xl">💭</span>
-                  Or describe what you want (for lyrics generation)
-                </label>
+                <div className="flex justify-between items-center mb-3">
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-200 uppercase tracking-wide">
+                    <span className="text-xl">💭</span>
+                    Or describe what you want (for lyrics generation)
+                  </label>
+                  <span className={`text-xs font-mono ${prompt.length > 180 ? 'text-red-400' : prompt.length > 150 ? 'text-yellow-400' : 'text-gray-500'}`}>
+                    {prompt.length}/200
+                  </span>
+                </div>
                 <input
                   type="text"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
+                  maxLength={200}
                   placeholder="A song about overcoming challenges and finding inner strength"
                   className="w-full p-4 rounded-xl bg-gray-900/50 border-2 border-gray-700 focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 outline-none transition-all text-white placeholder-gray-500 text-lg shadow-inner"
                 />
