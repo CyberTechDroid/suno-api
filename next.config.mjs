@@ -17,11 +17,25 @@ const nextConfig = {
       };
     }
     
+    // Mark SunoApi and related modules as external for server
+    if (isServer) {
+      config.externals = config.externals || [];
+      config.externals.push({
+        '@playwright/browser-chromium': 'commonjs @playwright/browser-chromium',
+        'rebrowser-playwright-core': 'commonjs rebrowser-playwright-core',
+      });
+    }
+    
     return config;
   },
   experimental: {
     serverMinification: false, // the server minification unfortunately breaks the selector class names
-    serverComponentsExternalPackages: ['@playwright/browser-chromium', 'rebrowser-playwright-core'],
+    serverComponentsExternalPackages: [
+      '@playwright/browser-chromium', 
+      'rebrowser-playwright-core',
+      'ghost-cursor-playwright',
+      'user-agents',
+    ],
   },
   images: {
     remotePatterns: [
@@ -42,6 +56,8 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Don't try to prerender API routes
+  output: 'standalone',
 };  
 
 export default nextConfig;
