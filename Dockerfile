@@ -39,5 +39,6 @@ COPY --from=builder /src/.next ./.next
 COPY --from=builder /src/public ./public
 COPY --from=builder /src/next.config.mjs ./next.config.mjs
                                                                                                                     
-EXPOSE 3000                                                                                                             
-CMD ["pnpm", "run", "start"]
+EXPOSE 3000
+# Use standalone server instead of "next start" when output: 'standalone' is configured
+CMD ["node", ".next/standalone/server.js"]
