@@ -445,16 +445,16 @@ export default function SongCreator() {
                     <span className="text-xl">🎸</span>
                     Music Style / Genre
                   </label>
-                  <span className={`text-xs font-mono ${tags.length > 100 ? 'text-red-400' : tags.length > 80 ? 'text-yellow-400' : 'text-gray-500'}`}>
-                    {tags.length}/120
+                  <span className={`text-xs font-mono ${tags.length > 1000 ? 'text-red-400' : tags.length > 800 ? 'text-yellow-400' : 'text-gray-500'}`}>
+                    {tags.length}/1000
                   </span>
                 </div>
                 <input
                   type="text"
                   value={tags}
                   onChange={(e) => setTags(e.target.value)}
-                  maxLength={120}
-                  placeholder="e.g., Indie Folk, Acoustic Rock, Upbeat, 120 BPM"
+                  maxLength={1000}
+                  placeholder="e.g., Indie Folk, Acoustic Rock, Upbeat, 120 BPM, Emotional, Storytelling, Guitar-driven, Melodic"
                   className="w-full p-4 rounded-xl bg-gray-900/50 border-2 border-gray-700 focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 outline-none transition-all text-white placeholder-gray-500 text-lg shadow-inner"
                 />
                 <p className="mt-2 text-xs text-gray-500">Keep it concise - describe the genre, mood, and key characteristics</p>
