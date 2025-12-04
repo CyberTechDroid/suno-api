@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       const audioInfo = await (await sunoApi((await cookies()).toString())).custom_generate(
         prompt, tags, title,
         Boolean(make_instrumental),
-        model || "chirp-v3-5-beta", // Updated to use v5 model
+        model || "v5", // Changed from "chirp-v3-5-beta" to "v5"
         Boolean(wait_audio),
         negative_tags
       );
